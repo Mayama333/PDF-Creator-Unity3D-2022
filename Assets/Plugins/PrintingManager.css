@@ -1,0 +1,163 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+//using Sfs2X.Entities.Data;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using System;
+
+public class PrintingManager : MonoBehaviour
+{
+    string path = null;
+
+    public Canvas canvasToSreenShot;
+    public int numImagen;
+    public string fechaNum;
+
+    public bool mostrarDire;
+
+    void Start()
+    {
+        path = Application.dataPath + "/Ticket.pdf";
+
+        if (mostrarDire == true)
+        {
+            //Do Something With the Image (Save)
+            string path = Application.persistentDataPath + "/" + numImagen + ".png";
+            Debug.Log(path);
+        }
+
+        //Subscribe
+        CanvasScreenShot.OnPictureTaken += receivePNGScreenShot;
+        CanvasScreenShot screenShot = GameObject.Find("ObjectCanvasScreen").GetComponent<CanvasScreenShot>();
+
+    }
+    public void SacarScrent()
+    {
+        CanvasScreenShot.OnPictureTaken += receivePNGScreenShot;
+        CanvasScreenShot screenShot = GameObject.Find("ObjectCanvasScreen").GetComponent<CanvasScreenShot>();
+        screenShot.takeScreenShot(canvasToSreenShot, SCREENSHOT_TYPE.IMAGE_AND_TEXT, false);
+    }
+
+    public void OnEnable()
+    {
+        //Un-Subscribe
+        CanvasScreenShot.OnPictureTaken -= receivePNGScreenShot;
+    }
+
+    void receivePNGScreenShot(byte[] pngArray)
+    {
+        Debug.Log("Picture taken");
+
+        //Do Something With the Image (Save)
+        //Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        string path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        //string path = Application.persistentDataPath + "/" + numImagen + ".png";
+        Directory.CreateDirectory(path + "/Planillas Guardadas");
+        System.IO.File.WriteAllBytes(path + "/Planillas Guardadas" + "/" + numImagen + ".png", pngArray);
+        Debug.Log(path);
+
+        GenerateFile(pngArray);
+    }
+
+
+
+
+
+
+    public void GenerateFile(byte[] pngArray) {
+        if (File.Exists(path))
+            File.Delete(path);
+        using (var fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
+        {
+            var document = new Document(PageSize.A4, 10f, 10f, 10f, 0f);
+            var writer = PdfWriter.GetInstance(document, fileStream);
+
+            document.Open();
+
+            document.NewPage();
+
+            var baseFont = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            /*Paragraph p = new Paragraph(string.Format("Ticket Id : {0}", 12345)); //iSFSObject.GetUtfString("TICKET_ID"
+            p.Alignment = Element.ALIGN_CENTER;
+            document.Add(p);
+
+            document.Add(new Paragraph("Hello World!"));
+
+            p = new Paragraph(string.Format("Bet Number : {0}     BetAmount : {1}", 1, 100));
+            p.Alignment = Element.ALIGN_CENTER;
+            document.Add(p);
+            */
+
+            //Add Cover Page 1
+
+
+            MemoryStream ms = new MemoryStream(pngArray);
+
+            Document doc = new Document(PageSize.A4); // Crear un documento A4
+        
+            iTextSharp.text.Image image = iTextSharp.text.Image.GetInstance(ms); // Crear una instancia de imagen
+                                                                                 // Limita la imagen para que no exceda el rango A4
+            if ((image.Height > PageSize.A4.Height) || (image.Width > PageSize.A4.Width))
+            {
+                image.ScaleToFit(PageSize.A4.Width, PageSize.A4.Height);
+            }
+            // Alineación central
+            image.Alignment = Element.ALIGN_MIDDLE;
+
+            document.Add(image);
+
+            document.Close();
+            writer.Close();
+        } 
+
+
+
+        //StreamWriter writer = new StreamWriter(path, false);
+        //writer.WriteLine(string.Format("Ticket Id : {0}",iSFSObject.GetUtfString("TICKET_ID")));
+        //var betting = iSFSObject.GetSFSArray("BET_DETAILS");
+        //for (int i = 0; i< betting.Count;i++)
+        //    writer.WriteLine(string.Format("Bet Number : {0}     BetAmount : {1}", betting.GetSFSObject(i).GetUtfString("BET_NUM"), betting.GetSFSObject(i).GetDouble("BET_AMOUNT")));
+        //writer.Close();
+
+        PrintFiles();
+    }
+
+    void PrintFiles()
+    {
+        Debug.Log(path);
+        if (path == null)
+            return;
+
+        if (File.Exists(path))
+        {
+            Debug.Log("file found");
+            //var startInfo = new System.Diagnostics.ProcessStartInfo(path);
+            //int i = 0;
+            //foreach (string verb in startInfo.Verbs)
+            //{
+            //    // Display the possible verbs.
+            //    Debug.Log(string.Format("  {0}. {1}", i.ToString(), verb));
+            //    i++;
+            //}
+        }
+        else
+        {
+            Debug.Log("file not found");
+            return;
+        }
+        System.Diagnostics.Process process = new System.Diagnostics.Process();
+        process.StartInfo.CreateNoWindow = true;
+        process.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Normal;
+        process.StartInfo.UseShellExecute = true;
+        process.StartInfo.FileName = path;
+        //process.StartInfo.Verb = "print";
+
+        process.Start();
+        //process.WaitForExit();
+
+    }
+}
